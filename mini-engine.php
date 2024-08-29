@@ -6,11 +6,54 @@ class MiniEngine
 {
     public static function dispatch($custom_function = null)
     {
-        list($controller, $action) = self::getControllerAndAction($custom_function);
+        try {
+            $controller_action_params = self::getControllerAndAction($custom_function);
+            $controller = $controller_action_params[0];
+            $action = $controller_action_params[1];
+            $params = $controller_action_params[2] ?? [];
+        } catch (Exception $e) {
+            self::runControllerAction('error', 'error', [$e]);
+        }
+
+        self::runControllerAction($controller, $action, $params);
     }
 
-    protected static function getControllerAndAction()
+    protected static function runControllerAction($controller, $action, $params)
     {
+        $controller_class = ucfirst($controller) . 'Controller';
+        $controller_file = 'controllers/' . $controller_class . '.php';
+        if (!file_exists($controller_file)) {
+            return self::runControllerAction('error', 'error', [new Exception("Controller not found: $controller")]);
+        }
+
+        include($controller_file);
+
+        $controller_instance = new $controller_class();
+        $action_method = $action . 'Action';
+        if (!method_exists($controller_instance, $action_method)) {
+            throw new Exception("Action not found: $action");
+        }
+
+        call_user_func_array([$controller_instance, $action_method], $params);
+    }
+
+    protected static function getControllerAndAction($custom_function)
+    {
+        if (!is_null($custom_function)) {
+            $uri = $_SERVER['REQUEST_URI'];
+            $result = $custom_function($uri);
+            if (!is_null($result)) {
+                return $result;
+            }
+        }
+
+        $uri = $_SERVER['REQUEST_URI'];
+        $uri = explode('?', $uri)[0];
+        $uri = ltrim($uri, '/');
+        $uri = explode('/', $uri);
+        $controller = strtolower($uri[0] ?? 'index') ?: 'index';
+        $action = strtolower($uri[1] ?? 'index') ?: 'index';
+        return [$controller, $action];
     }
 }
 
@@ -123,9 +166,9 @@ EOF
 
 class ErrorController
 {
-    public function errorAction()
+    public function errorAction(\$error)
     {
-        echo "404 Not Found";
+        echo "Error: " . \$error->getMessage();
     }
 }
 
