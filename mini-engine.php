@@ -95,6 +95,7 @@ EOF
 
         error_log("created index.php");
 
+        // Create controllers/IndexController.php
         file_put_contents('controllers/IndexController.php', <<<EOF
 <?php
 
@@ -104,11 +105,45 @@ class IndexController
     {
         echo "Hello, Mini Engine!";
     }
+
+    public function robotsAction()
+    {
+        header('Content-Type: text/plain');
+        echo "#\\n";
+    }
 }
+
 EOF
         );
-
         error_log("created controllers/IndexController.php");
+
+        // Create controllers/ErrorController.php
+        file_put_contents('controllers/ErrorController.php', <<<EOF
+<?php
+
+class ErrorController
+{
+    public function errorAction()
+    {
+        echo "404 Not Found";
+    }
+}
+
+EOF
+        );
+        error_log("created controllers/ErrorController.php");
+
+        // Create .htaccess
+        file_put_contents('.htaccess', <<<EOF
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+EOF
+        );
+        error_log("created .htaccess");
+
+        error_log("Mini Engine project initialized.");
     }
 
     public static function cmd_help()
