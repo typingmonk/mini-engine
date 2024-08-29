@@ -13,7 +13,7 @@ class MiniEngineCLI
 {
     public static function dispatch()
     {
-        $cmd = isset($argv[1]) ? $argv[1] : null;
+        $cmd = $_SERVER['argv'][1] ?? null;
         switch ($cmd) {
             case 'init':
                 self::cmd_init();
@@ -22,6 +22,41 @@ class MiniEngineCLI
                 self::cmd_help();
                 break;
         }
+    }
+
+    public static function cmd_init()
+    {
+        mkdir('controllers');
+        mkdir('libraries');
+        mkdir('static');
+
+        error_log("created directories: controllers, libraries, static");
+
+        file_put_contents('index.php', <<<EOF
+<?php
+    define('MINI_ENGINE_LIBRARY', true);
+    include(__DIR__ . '/mini-engine.php');
+    MiniEngine::dispatch(function(){
+    });
+EOF
+        );
+
+        error_log("created index.php");
+
+        file_put_contents('controllers/IndexController.php', <<<EOF
+<?php
+
+class IndexController
+{
+    public function indexAction()
+    {
+        echo "Hello, Mini Engine!";
+    }
+}
+EOF
+        );
+
+        error_log("created controllers/IndexController.php");
     }
 
     public static function cmd_help()
