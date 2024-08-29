@@ -4,7 +4,12 @@ define('MINI_ENGINE_VERSION', '0.1.0');
 
 class MiniEngine
 {
-    public static function dispatch()
+    public static function dispatch($custom_function = null)
+    {
+        list($controller, $action) = self::getControllerAndAction($custom_function);
+    }
+
+    protected static function getControllerAndAction()
     {
     }
 }
@@ -43,11 +48,13 @@ class MiniEngineCLI
         // Create init.inc.php
         file_put_contents('init.inc.php', <<<EOF
 <?php
-    define('MINI_ENGINE_LIBRARY', true);
-    include(__DIR__ . '/mini-engine.php');
-    if (file_exists(__DIR__ . '/config.inc.php')) {
-        include(__DIR__ . '/config.inc.php');
-    }
+
+define('MINI_ENGINE_LIBRARY', true);
+include(__DIR__ . '/mini-engine.php');
+if (file_exists(__DIR__ . '/config.inc.php')) {
+    include(__DIR__ . '/config.inc.php');
+}
+
 EOF
         );
         error_log("created init.inc.php");
@@ -55,7 +62,9 @@ EOF
         // Create config.sample.inc.php
         file_put_contents('config.sample.inc.php', <<<EOF
 <?php
-    putenv('APP_NAME', 'Mini Engine sample application');
+
+putenv('APP_NAME', 'Mini Engine sample application');
+
 EOF
         );
         error_log("created config.sample.inc.php");
@@ -71,10 +80,16 @@ EOF
         // Create index.php
         file_put_contents('index.php', <<<EOF
 <?php
-    include(__DIR__ . '/init.inc.php');
+include(__DIR__ . '/init.inc.php');
 
-    MiniEngine::dispatch(function(){
-    });
+MiniEngine::dispatch(function(\$uri){
+    if (\$uri == '/robots.txt') {
+        return ['index', 'robots'];
+    }
+    // default
+    return null;
+});
+
 EOF
         );
 
