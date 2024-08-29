@@ -34,7 +34,13 @@ class MiniEngine
             throw new Exception("Action not found: $action");
         }
 
-        call_user_func_array([$controller_instance, $action_method], $params);
+        try {
+            call_user_func_array([$controller_instance, $action_method], $params);
+        } catch (MiniEngine_Controller_NoView $e) {
+            // do nothing
+        } catch (Exception $e) {
+            self::runControllerAction('error', 'error', [$e]);
+        }
     }
 
     protected static function getControllerAndAction($custom_function)
@@ -54,6 +60,25 @@ class MiniEngine
         $controller = strtolower($uri[0] ?? 'index') ?: 'index';
         $action = strtolower($uri[1] ?? 'index') ?: 'index';
         return [$controller, $action];
+    }
+}
+
+class MiniEngine_Controller_NoView extends Exception
+{
+}
+
+class MiniEngine_Controller
+{
+    public function json($data)
+    {
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        return $this->noview();
+    }
+
+    public function noview()
+    {
+        throw new MiniEngine_Controller_NoView();
     }
 }
 
@@ -142,7 +167,7 @@ EOF
         file_put_contents('controllers/IndexController.php', <<<EOF
 <?php
 
-class IndexController
+class IndexController extends MiniEngine_Controller
 {
     public function indexAction()
     {
@@ -153,6 +178,7 @@ class IndexController
     {
         header('Content-Type: text/plain');
         echo "#\\n";
+        return \$this->noview();
     }
 }
 
@@ -164,7 +190,7 @@ EOF
         file_put_contents('controllers/ErrorController.php', <<<EOF
 <?php
 
-class ErrorController
+class ErrorController extends MiniEngine_Controller
 {
     public function errorAction(\$error)
     {
