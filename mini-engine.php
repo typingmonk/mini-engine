@@ -80,6 +80,12 @@ class MiniEngine_Controller
     {
         throw new MiniEngine_Controller_NoView();
     }
+
+    public function redirect($uri, $code = 302)
+    {
+        header("Location: $uri", true, $code);
+        return $this->noview();
+    }
 }
 
 class MiniEngineCLI
