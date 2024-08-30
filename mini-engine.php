@@ -101,6 +101,8 @@ class MiniEngine
             $controller = $controller_action_params[0];
             $action = $controller_action_params[1];
             $params = $controller_action_params[2] ?? [];
+
+            self::runControllerAction($controller, $action, $params);
         } catch (Exception $e) {
             self::runControllerAction('error', 'error', [$e]);
             return;
@@ -108,8 +110,6 @@ class MiniEngine
             self::runControllerAction('error', 'error', [$e]);
             return;
         }
-
-        self::runControllerAction($controller, $action, $params);
     }
 
     protected static function runControllerAction($controller, $action, $params)
