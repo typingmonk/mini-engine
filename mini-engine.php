@@ -146,6 +146,9 @@ class MiniEngine
     {
         if (!is_null($custom_function)) {
             $uri = $_SERVER['REQUEST_URI'];
+            if (strpos($uri, '?')) {
+                $uri = explode('?', $uri)[0];
+            }
             $result = $custom_function($uri);
             if (!is_null($result)) {
                 return $result;
