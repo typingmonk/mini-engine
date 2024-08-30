@@ -28,7 +28,16 @@ class MiniEngine
             "#0 $file:$line"
         ], $trace);
 
-        error_log("Error: $message in $file:$line\nStack trace:\n" . implode("\n", $trace));
+        if ('MiniEngine_Controller_NotFound' != get_class($error)) {
+            error_log("Error: $message in $file:$line\nStack trace:\n" . implode("\n", $trace));
+        } else {
+            if (getenv('ENV') == 'production') {
+                header('HTTP/1.1 404 Not Found');
+                echo "<h1>404 Not Found</h1>";
+                exit;
+            }
+        }
+
         if (getenv('ENV') == 'production') {
             header('HTTP/1.1 500 Internal Server Error');
             exit;
@@ -108,7 +117,7 @@ class MiniEngine
         $controller_class = ucfirst($controller) . 'Controller';
         $controller_file = self::getRoot() . '/controllers/' . $controller_class . '.php';
         if (!file_exists($controller_file)) {
-            return self::runControllerAction('error', 'error', [new Exception("Controller not found: $controller")]);
+            return self::runControllerAction('error', 'error', [new MiniEngine_Controller_NotFound("Controller not found: {$controller}:{$action}")]);
         }
 
         if (!class_exists($controller_class)) {
@@ -118,7 +127,7 @@ class MiniEngine
         $controller_instance = new $controller_class();
         $action_method = $action . 'Action';
         if (!method_exists($controller_instance, $action_method)) {
-            throw new Exception("Action not found: $action");
+            return self::runControllerAction('error', 'error', [new MiniEngine_Controller_NotFound("Action not found: {$controller}:{$action}")]);
         }
 
         try {
@@ -154,6 +163,10 @@ class MiniEngine
 }
 
 class MiniEngine_Controller_NoView extends Exception
+{
+}
+
+class MiniEngine_Controller_NotFound extends Exception
 {
 }
 
