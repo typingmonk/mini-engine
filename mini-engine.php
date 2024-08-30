@@ -1,5 +1,9 @@
 <?php
 
+/**
+ *  Mini Engine: https://github.com/openfunltd/mini-engine
+ *  License: BSD 3-Clause License
+ */
 define('MINI_ENGINE_VERSION', '0.1.0');
 
 class MiniEngine
