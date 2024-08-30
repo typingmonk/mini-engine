@@ -4,6 +4,31 @@ define('MINI_ENGINE_VERSION', '0.1.0');
 
 class MiniEngine
 {
+    public static function registerAutoLoad()
+    {
+        spl_autoload_register(array('MiniEngine', 'autoload'));
+	}
+
+	public static function autoload($class)
+    {
+		if (class_exists($class, false) or interface_exists($class, false)) {
+			return false;
+		}
+
+		$class = str_replace('\\', DIRECTORY_SEPARATOR, str_replace('_', DIRECTORY_SEPARATOR, $class)) . '.php';
+
+		$paths = explode(PATH_SEPARATOR, get_include_path());
+		foreach ($paths as $path) {
+			$path = rtrim($path, '/');
+			if (file_exists($path . '/' . $class)) {
+				require $class;
+				return true;
+			}
+		}
+
+		return false;
+    }
+
     public static function getRoot()
     {
         if (defined('MINI_ENGINE_ROOT')) {
@@ -216,6 +241,11 @@ include(__DIR__ . '/mini-engine.php');
 if (file_exists(__DIR__ . '/config.inc.php')) {
     include(__DIR__ . '/config.inc.php');
 }
+set_include_path(
+    __DIR__ . '/libraries'
+    . PATH_SEPARATOR . __DIR__ . '/models'
+);
+MiniEngine::registerAutoLoad();
 
 EOF
         );
@@ -338,6 +368,22 @@ This is Index page
 EOF
         );
         error_log("created views/index/index.php");
+
+        // Create /libraries/MiniEngineHelper.php
+        file_put_contents('libraries/MiniEngineHelper.php', <<<EOF
+<?php
+
+class MiniEngineHelper
+{
+    public static function uniqid(\$len)
+    {
+        return substr(str_shuffle(str_repeat('0123456789abcdefghijklmnopqrstuvwxyz', \$len)), 0, \$len);
+    }
+}
+
+EOF
+        );
+        error_log("created libraries/MiniEngineHelper.php");
 
         error_log("Mini Engine project initialized.");
     }
