@@ -44,6 +44,14 @@ class MiniEngine
     public static function dispatch($custom_function = null)
     {
         try {
+            if (strpos($_SERVER['REQUEST_URI'], '/static') === 0) {
+                $file = self::getRoot() . $_SERVER['REQUEST_URI'];
+                if (file_exists($file) and is_file($file)) {
+                    header('Content-Type: ' . mime_content_type($file));
+                    readfile($file);
+                    return;
+                }
+            }
             $controller_action_params = self::getControllerAndAction($custom_function);
             $controller = $controller_action_params[0];
             $action = $controller_action_params[1];
