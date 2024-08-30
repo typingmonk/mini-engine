@@ -197,6 +197,13 @@ class MiniEngine_Controller
         return $this->noview();
     }
 
+    public function cors_json($data)
+    {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET');
+        return $this->json($data);
+    }
+
     public function noview()
     {
         throw new MiniEngine_Controller_NoView();
