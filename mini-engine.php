@@ -210,10 +210,37 @@ class MiniEngineCLI
             case 'init':
                 self::cmd_init();
                 break;
+            case 'update':
+                self::cmd_update();
+                break;
             default:
                 self::cmd_help();
                 break;
         }
+    }
+
+    public static function cmd_update()
+    {
+        $url = 'https://raw.githubusercontent.com/openfunltd/mini-engine/main/mini-engine.php';
+        $current_version = MINI_ENGINE_VERSION;
+
+        $new_mini_engine = file_get_contents($url);
+        preg_match('/define\(\'MINI_ENGINE_VERSION\', \'([^\']+)\'\);/', $new_mini_engine, $matches);
+        $new_version = $matches[1] ?? null;
+
+        if ($new_mini_engine === false or $new_version === false) {
+            error_log("Failed to update Mini Engine.");
+            return;
+        }
+
+        $current_mini_engine = file_get_contents(__FILE__);
+        if ($new_mini_engine === $current_mini_engine) {
+            error_log("Mini Engine is already up-to-date.");
+            return;
+        }
+
+        file_put_contents(__FILE__, $new_mini_engine);
+        error_log("Mini Engine updated from $current_version to $new_version.");
     }
 
     public static function cmd_init()
@@ -397,6 +424,7 @@ EOF
         echo "Usage: php mini-engine.php <command>\n";
         echo "Commands:\n";
         echo "  init    Initialize a new Mini Engine project\n";
+        echo "  update  Update Mini Engine\n";
     }
 }
 
