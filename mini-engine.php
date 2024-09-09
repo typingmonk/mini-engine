@@ -388,7 +388,8 @@ EOF
         file_put_contents('config.sample.inc.php', <<<EOF
 <?php
 
-putenv('APP_NAME', 'Mini Engine sample application');
+putenv('APP_NAME=Mini Engine sample application');
+putenv('DATABASE_URL=psql://user:password@localhost:5432/dbname');
 
 EOF
         );
