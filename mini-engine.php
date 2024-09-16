@@ -704,6 +704,7 @@ class MiniEngine_Table_Row
         }
         $sql = "UPDATE ::table SET " . implode(', ', $update_terms) . " WHERE " . implode(' AND ', $where_terms);
         MiniEngine::dbExecute($sql, $params);
+        $this->_origin_data = $this->_data;
     }
 }
 
