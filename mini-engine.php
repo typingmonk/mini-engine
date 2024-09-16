@@ -887,6 +887,16 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
         $this->rewind();
         return $this->current();
     }
+
+    public function toArray()
+    {
+        $this->rewind();
+        $data = [];
+        foreach ($this as $row) {
+            $data[] = $row->toArray();
+        }
+        return $data;
+    }
 }
 
 class MiniEngine_Prompt
