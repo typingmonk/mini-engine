@@ -764,6 +764,29 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
     }
 }
 
+class MiniEngine_Prompt
+{
+    public static function init()
+    {
+        if (file_exists(__DIR__ . '/init.inc.php')) {
+            include(__DIR__ . '/init.inc.php');
+        }
+
+        while($line = readline(">> ")) {
+            if (function_exists('readline_add_history')) {
+                readline_add_history($line);
+            }
+            try {
+                eval($line . ";");
+                echo "\n";
+            } catch (Exception $e) {
+                echo $e->getMessage() . "\n";
+                echo $e->getTraceAsString() . "\n";
+            }
+        }
+    }
+}
+
 class MiniEngineCLI
 {
     public static function dispatch()
@@ -775,6 +798,9 @@ class MiniEngineCLI
                 break;
             case 'update':
                 self::cmd_update();
+                break;
+            case 'prompt':
+                MiniEngine_Prompt::init();
                 break;
             default:
                 self::cmd_help();
@@ -831,7 +857,7 @@ class MiniEngineCLI
 
 define('MINI_ENGINE_LIBRARY', true);
 define('MINI_ENGINE_ROOT', __DIR__);
-include(__DIR__ . '/mini-engine.php');
+require_once(__DIR__ . '/mini-engine.php');
 if (file_exists(__DIR__ . '/config.inc.php')) {
     include(__DIR__ . '/config.inc.php');
 }
@@ -995,6 +1021,7 @@ EOF
         echo "Commands:\n";
         echo "  init    Initialize a new Mini Engine project\n";
         echo "  update  Update Mini Engine\n";
+        echo "  prompt  Prompt for a command\n";
     }
 }
 
