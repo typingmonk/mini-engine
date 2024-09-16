@@ -432,6 +432,16 @@ class MiniEngine_Controller
         header("Location: $uri", true, $code);
         return $this->noview();
     }
+
+    public function alert($message, $uri = null)
+    {
+        echo "<script>alert(" . json_encode($message) . ");";
+        if ($uri) {
+            echo "location.href=" . json_encode($uri);
+        }
+        echo "</script>";
+        return $this->noview();
+    }
 }
 
 class MiniEngineCLI
