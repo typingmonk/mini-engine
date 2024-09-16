@@ -269,6 +269,32 @@ class MiniEngine
         $params = array_map('urldecode', array_slice($uri, 2));
         return [$controller, $action, $params];
     }
+
+    public static function http($url, $method = 'GET', $data = null, $headers = [])
+    {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_MAXREDIRS, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_HEADER, false);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+        if (!is_null($data)) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        }
+
+        $response = curl_exec($ch);
+        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        if ($status < 200 or $status >= 300) {
+            throw new Exception("HTTP request failed: $status : $response");
+        }
+        curl_close($ch);
+
+        return $response;
+    }
 }
 
 class MiniEngine_Controller_NoView extends Exception
