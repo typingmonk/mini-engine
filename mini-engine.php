@@ -484,6 +484,11 @@ class MiniEngine_Controller
         return $this->noview();
     }
 
+    public function notfound($message)
+    {
+        throw new MiniEngine_Controller_NotFound($message);
+    }
+
     public function init_csrf()
     {
         $csrf_token = MiniEngine::getSession('csrf_token');
