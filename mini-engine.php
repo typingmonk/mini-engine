@@ -135,8 +135,17 @@ class MiniEngine
             }
         }, $sql);
         $stmt = self::getDb()->prepare($sql);
+        self::log($sql, $copy_params);
         $stmt->execute($copy_params);
         return $stmt;
+    }
+
+    public static function log($sql, $params)
+    {
+        if (getenv('ENV') == 'production') {
+            return;
+        }
+        error_log("SQL: $sql, Params: " . mb_strimwidth(json_encode($params, JSON_UNESCAPED_UNICODE), 0, 300, '...'));
     }
 
     public static function initEnv()
