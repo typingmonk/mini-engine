@@ -557,6 +557,15 @@ class MiniEngine_Table
         return $table->_name;
     }
 
+    public static function getTableColumns()
+    {
+        $table = self::getTableClass();
+        if (is_null($table->_columns)) {
+            throw new Exception("Columns not defined.");
+        }
+        return $table->_columns;
+    }
+
     public function getResultSetClass()
     {
         if (class_exists(get_called_class() . 'Rowset')) {
@@ -769,7 +778,11 @@ class MiniEngine_Table_Row
         $cols = [];
         $vals = [];
         $update_terms = [];
+        $table_columns = $this->_table->getTableColumns();
         foreach ($this->_data as $col => $val) {
+            if ($table_columns[$col]['type'] == 'jsonb') {
+                $val = json_encode($val);
+            }
             if (!array_key_exists($col, $this->_origin_data)) {
                 $cols[] = "::col_{$col}";
                 $vals[] = ":val_{$col}";
@@ -895,6 +908,16 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
         $sql = "SELECT * FROM ::table WHERE " . $this->getSearchQuery($params);
         $stmt = MiniEngine::dbExecute($sql, $params);
         $this->_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $table_columns = $this->_table->getTableColumns();
+        $this->_data = array_map(function($row) use ($table_columns) {
+            foreach ($row as $k => $v) {
+                if ($table_columns[$k]['type'] == 'jsonb') {
+                    $row[$k] = json_decode($v);
+                }
+            }
+            return $row;
+        }, $this->_data);
+
         $this->_pointer = 0;
     }
 
