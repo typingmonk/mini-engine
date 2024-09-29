@@ -668,6 +668,7 @@ class MiniEngine_Table
                 'bool', 'boolean',
                 'text',
                 'jsonb',
+                'geometry',
             ])) {
                 $type = strtolower($config['type']);
                 if (array_key_exists($type, $alias)) {
