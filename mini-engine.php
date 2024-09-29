@@ -529,6 +529,27 @@ class MiniEngine_Table
         }
     }
 
+    public static function quote($value, $col = null)
+    {
+        $table = self::getTableClass();
+        $table_columns = $table->getTableColumns();
+        $db = MiniEngine::getDb();
+        if (is_null($col)) {
+            return $db->quote($value);
+        }
+        if (!array_key_exists($col, $table_columns)) {
+            throw new Exception("Column not found: $col");
+        }
+        if (in_array($table_columns[$col]['type'], ['int', 'integer', 'bigint'])) {
+            return (int) $value;
+        } elseif (in_array($table_columns[$col]['type'], ['bool', 'boolean'])) {
+            return $value ? 'TRUE' : 'FALSE';
+        } elseif ($table_columns[$col]['type'] == 'jsonb') {
+            return $db->quote(json_encode($value));
+        }
+        return $db->quote($value);
+    }
+
     protected static $_debug = 0;
     public static function getTableClass()
     {
