@@ -654,14 +654,15 @@ class MiniEngine_Table
     {
         $table = self::getTableClass();
         $primary_keys = $table->getPrimaryKeys();
-        return $table->search(array_combine($primary_keys, is_scalar($id) ? [$id] : $id))->first();
+        return $table->search(array_combine($primary_keys, is_scalar($id) ? [$id] : $id), ['full'])->first();
     }
 
-    public static function search($terms)
+    public static function search($terms, $opts = [])
     {
         $table = self::getTableClass();
         $conf = [];
         $conf['table'] = $table;
+        $conf['flags'] = $opts;
         $rowset_class = $table->getResultSetClass();
         $rowset = new $rowset_class($conf);
         return $rowset->search($terms);
@@ -747,7 +748,7 @@ class MiniEngine_Table
         $table = self::getTableClass();
         if (preg_match('#^find_by_([a-zA-Z0-9_]+)$#', $name, $matches)) {
             $cols = explode('_and_', $matches[1]);
-            return $table->search(array_combine($cols, $args))->first();
+            return $table->search(array_combine($cols, $args), ['full'])->first();
         }
         throw new Exception("Method not found: $name");
     }
@@ -875,19 +876,22 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
 {
     protected $_table = null;
     protected $_data = null;
+    protected $_flags = [];
     protected $_pointer = 0;
     protected $_search = [];
 
     public function __construct($conf)
     {
         $this->_table = $conf['table'];
+        $this->_flags = $conf['flags'];
     }
 
     public function search()
     {
         $rs = clone $this;
         $args = func_get_args();
-        $rs->_search[] = $args;
+        $rs->_search[] = $args[0];
+        $rs->_flags = array_unique(array_merge($rs->_flags, $args[1] ?? []));
         return $rs;
     }
 
@@ -895,17 +899,19 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
     {
         $terms = [];
         foreach ($this->_search as $search) {
-            if (count($search) == 1 and is_array($search[0])) {
-                $search = $search[0];
-                foreach (array_keys($search) as $idx => $col) {
-                    $terms[] = "::col_{$idx} = :val_{$idx}";
-                    $params["::col_{$idx}"] = $col;
-                    $params[":val_{$idx}"] = $search[$col];
+            if (is_array($search)) {
+                foreach ($search as $k => $v) {
+                    $terms[] = "::col_{$k} = :val_{$k}";
+                    $params["::col_{$k}"] = $k;
+                    $params[":val_{$k}"] = $v;
                 }
-            } elseif (count($search) == 1 and is_scalar($search[0]) and 1 == $search[0]) {
-            } else {
-                throw new Exception("Unsupported search query." . json_encode($search));
+                continue;
             }
+            if (is_scalar($search) and 1 == $search) {
+                continue;
+            }
+
+            throw new Exception("Unsupported search query." . json_encode($search));
         }
         if (count($terms) == 0) {
             return '1=1';
@@ -967,13 +973,31 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
         $params = [
             '::table' => $this->_table->getTableName(),
         ];
-        $sql = "SELECT * FROM ::table WHERE " . $this->getSearchQuery($params);
+        $select_terms = [];
+        $table_columns = $this->_table->getTableColumns();
+        $col_idx = 0;
+        foreach ($table_columns as $col => $config) {
+            if (!in_array('full', $this->_flags) and $config['lazy'] ?? false) {
+                continue;
+            }
+            $params["::select_{$col_idx}"] = $col;
+            if ($config['type'] == 'geometry') {
+                $select_terms[] = "ST_AsGeoJSON(::select_{$col_idx}) AS ::select_{$col_idx}";
+            } else {
+                $select_terms[] = "::select_{$col_idx}";
+            } 
+            $col_idx ++;
+        }
+
+        $sql = "SELECT " . implode(',', $select_terms) . " FROM ::table WHERE " . $this->getSearchQuery($params);
         $stmt = MiniEngine::dbExecute($sql, $params);
         $this->_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $table_columns = $this->_table->getTableColumns();
         $this->_data = array_map(function($row) use ($table_columns) {
             foreach ($row as $k => $v) {
                 if ($table_columns[$k]['type'] == 'jsonb') {
+                    $row[$k] = json_decode($v);
+                } elseif ($table_columns[$k]['type'] == 'geometry') {
                     $row[$k] = json_decode($v);
                 }
             }
