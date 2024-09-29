@@ -510,6 +510,7 @@ class MiniEngine_Table
     protected $_primary_keys = null;
     protected $_columns = null;
     protected $_indexes = null;
+    protected $_relations = null;
     protected $_table = null;
 
     public function init()
@@ -551,9 +552,11 @@ class MiniEngine_Table
     }
 
     protected static $_debug = 0;
-    public static function getTableClass()
+    public static function getTableClass($class = null)
     {
-        $class = get_called_class();
+        if (is_null($class)) {
+            $class = get_called_class();
+        }
         if (!isset(self::$_tables[$class])) {
             self::$_tables[$class] = new $class();
             self::$_tables[$class]->__init();
@@ -585,6 +588,15 @@ class MiniEngine_Table
             throw new Exception("Columns not defined.");
         }
         return $table->_columns;
+    }
+
+    public function getTableRelations()
+    {
+        $table = self::getTableClass();
+        if (is_null($table->_relations)) {
+            return [];
+        }
+        return $table->_relations;
     }
 
     public function getResultSetClass()
@@ -788,7 +800,36 @@ class MiniEngine_Table_Row
 
     public function __get($name)
     {
-        return $this->_data[$name] ?? null;
+        $table_columns = $this->_table->getTableColumns();
+        if (array_key_exists($name, $table_columns)) {
+            return $this->_data[$name] ?? null;
+        }
+
+        $table_relations = $this->_table->getTableRelations();
+        if (array_key_exists($name, $table_relations)) {
+            $relation = $table_relations[$name];
+            if (!array_key_exists('rel', $relation)) {
+                throw new Exception("Relation type not defined.");
+            }
+            if (!array_key_exists('type', $relation)) {
+                throw new Exception("Relation type not defined.");
+            }
+
+            $target_table = MiniEngine_Table::getTableClass($relation['type']);
+            if ($relation['rel'] == 'has_many') {
+                $foreign_key = $relation['foreign_key'] ?? $this->_table->getPrimaryKeys()[0];
+                $foreign_value = $this->_data[$this->_table->getPrimaryKeys()[0]];
+                return $target_table->search([$foreign_key => $foreign_value]);
+            } else if ($relation['rel'] == 'has_one') {
+                $foreign_key = $relation['foreign_key'] ?? $this->_table->getPrimaryKeys()[0];
+                $foreign_value = $this->_data[$foreign_key];
+                return $target_table->find($foreign_value);
+            } else {
+                throw new Exception("Unsupported relation type: {$relation['rel']}");
+            }
+        }
+
+        throw new Exception("Column not found: $name");
     }
 
     public function save()
