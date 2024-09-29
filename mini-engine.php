@@ -1044,14 +1044,16 @@ EOF
 
 putenv('APP_NAME=Mini Engine sample application');
 putenv('DATABASE_URL=pgsql://user:password@localhost:5432/dbname');
-putenv('SESSION_SECRET=$session_secret');
+putenv('SESSION_SECRET=___SECRET___');
 putenv('SESSION_DOMAIN='); // optional
 
 EOF
         );
         error_log("created config.sample.inc.php");
         if (!file_exists('config.inc.php')) {
-            copy('config.sample.inc.php', 'config.inc.php');
+            $content = file_get_contents('config.sample.inc.php');
+            $content = str_replace('__SECRET__', $session_secret, $content);
+            file_put_contents('config.inc.php', $content);
             error_log("created config.inc.php");
         }
 
