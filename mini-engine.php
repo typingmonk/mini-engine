@@ -656,20 +656,27 @@ class MiniEngine_Table
             if (!array_key_exists('type', $config)) {
                 throw new Exception("Type not defined for column: $col");
             }
-            if ($config['type'] == 'serial') {
-                $cols[] = "::col_{$col} SERIAL";
-                $params["::col_{$col}"] = $col;
-            } elseif ($config['type'] == 'integer' or $config['type'] == 'int') {
-                $cols[] = "::col_{$col} INTEGER";
-                $params["::col_{$col}"] = $col;
-            } elseif ($config['type'] == 'text') {
-                $cols[] = "::col_{$col} TEXT";
-                $params["::col_{$col}"] = $col;
+            $alias = [
+                'int' => 'integer',
+                'bool' => 'boolean',
+            ];
+
+            if (in_array(strtolower($config['type']), [
+                'serial',
+                'integer', 'int',
+                'bigint',
+                'bool', 'boolean',
+                'text',
+                'jsonb',
+            ])) {
+                $type = strtolower($config['type']);
+                if (array_key_exists($type, $alias)) {
+                    $type = $alias[$type];
+                }
+                $cols[] = "::col{$col} " . strtoupper($type);
+                $params["::col{$col}"] = $col;
             } elseif ($config['type'] == 'varchar') {
                 $cols[] = "::col_{$col} VARCHAR(" . ($config['length'] ?? 255) . ")";
-                $params["::col_{$col}"] = $col;
-            } elseif ($config['type'] == 'jsonb') {
-                $cols[] = "::col_{$col} JSONB";
                 $params["::col_{$col}"] = $col;
             } else {
                 throw new Exception("Unsupported column type: {$config['type']}");
