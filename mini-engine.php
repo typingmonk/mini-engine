@@ -612,24 +612,7 @@ class MiniEngine_Table
     {
         $table = self::getTableClass();
         $primary_keys = $table->getPrimaryKeys();
-        if (is_scalar($id)) {
-            $id = [$id];
-        }
-        if (count($id) != count($primary_keys)) {
-            throw new Exception("Primary key count mismatch.");
-        }
-        $terms = [];
-        $params = [
-            '::table' => $table->getTableName(),
-        ];
-        foreach ($primary_keys as $idx => $key) {
-            $terms[] = "::id_col_{$idx} = :id_val_{$idx}";
-            $params["::id_col_{$idx}"] = $key;
-            $params[":id_val_{$idx}"] = $id[$idx];
-        }
-        $sql = "SELECT * FROM ::table WHERE " . implode(' AND ', $terms);
-        $stmt = MiniEngine::dbExecute($sql, $params);
-        return $stmt->fetchObject();
+        return $table->search(array_combine($primary_keys, is_scalar($id) ? [$id] : $id))->first();
     }
 
     public static function search($terms)
