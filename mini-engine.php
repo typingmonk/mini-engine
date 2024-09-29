@@ -577,7 +577,7 @@ class MiniEngine_Table
     {
         $table = self::getTableClass();
         if (is_null($table->_primary_keys)) {
-            $table->_primary_keys = ['id'];
+            $table->_primary_keys = [array_keys($table->_columns)[0] ?? 'id'];
         }
         if (is_string($table->_primary_keys)) {
             $table->_primary_keys = [$table->_primary_keys];
