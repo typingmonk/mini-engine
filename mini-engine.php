@@ -1146,6 +1146,9 @@ set_include_path(
     __DIR__ . '/libraries'
     . PATH_SEPARATOR . __DIR__ . '/models'
 );
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once(__DIR__ . '/vendor/autoload.php');
+}
 MiniEngine::initEnv();
 
 EOF
