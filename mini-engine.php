@@ -637,12 +637,16 @@ class MiniEngine_Table
         $params = [
             '::table' => $table->getTableName(),
         ];
+        $table_columns = $table->getTableColumns();
         $cols = [];
         $vals = [];
         foreach ($data as $col => $val) {
             $cols[] = "::col_{$col}";
             $vals[] = ":val_{$col}";
             $params["::col_{$col}"] = $col;
+            if ($table_columns[$col]['type'] == 'jsonb') {
+                $val = json_encode($val);
+            }
             $params[":val_{$col}"] = $val;
         }
         $sql = "INSERT INTO ::table (" . implode(', ', $cols) . ") VALUES (" . implode(', ', $vals) . ")";
