@@ -675,7 +675,7 @@ class MiniEngine_Table
     {
         $table = self::getTableClass();
         $primary_keys = $table->getPrimaryKeys();
-        return $table->search(array_combine($primary_keys, is_scalar($id) ? [$id] : $id), ['full'])->first();
+        return $table->search(array_combine($primary_keys, is_scalar($id) ? [$id] : $id), '*')->first();
     }
 
     public static function search($terms, $opts = [])
@@ -683,10 +683,9 @@ class MiniEngine_Table
         $table = self::getTableClass();
         $conf = [];
         $conf['table'] = $table;
-        $conf['flags'] = $opts;
         $rowset_class = $table->getResultSetClass();
         $rowset = new $rowset_class($conf);
-        return $rowset->search($terms);
+        return $rowset->search($terms, $opts);
     }
 
     public static function createTable()
@@ -769,7 +768,7 @@ class MiniEngine_Table
         $table = self::getTableClass();
         if (preg_match('#^find_by_([a-zA-Z0-9_]+)$#', $name, $matches)) {
             $cols = explode('_and_', $matches[1]);
-            return $table->search(array_combine($cols, $args), ['full'])->first();
+            return $table->search(array_combine($cols, $args), '*')->first();
         }
         throw new Exception("Method not found: $name");
     }
@@ -897,22 +896,21 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
 {
     protected $_table = null;
     protected $_data = null;
-    protected $_flags = [];
+    protected $_flags = null;
     protected $_pointer = 0;
     protected $_search = [];
 
     public function __construct($conf)
     {
         $this->_table = $conf['table'];
-        $this->_flags = $conf['flags'];
+        $this->_flags = $conf['flags'] ?? null;
     }
 
-    public function search()
+    public function search($terms, $flags = null)
     {
         $rs = clone $this;
-        $args = func_get_args();
-        $rs->_search[] = $args[0];
-        $rs->_flags = array_unique(array_merge($rs->_flags, $args[1] ?? []));
+        $rs->_search[] = $terms;
+        $rs->_flags = $flags;
         return $rs;
     }
 
@@ -998,7 +996,15 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
         $table_columns = $this->_table->getTableColumns();
         $col_idx = 0;
         foreach ($table_columns as $col => $config) {
-            if (!in_array('full', $this->_flags) and $config['lazy'] ?? false) {
+            if ($this->_flags === '*') {
+                // all fields
+            } else if (is_array($this->_flags) and !in_array($col, $this->_flags)) {
+                continue;
+            } else if (is_scalar($this->_flags)) {
+               if ($col != $this->_flags) {
+                   continue;
+               }
+            } else if ($config['lazy'] ?? false) {
                 continue;
             }
             $params["::select_{$col_idx}"] = $col;
@@ -1034,12 +1040,16 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
         return $this->current();
     }
 
-    public function toArray()
+    public function toArray($col = null)
     {
         $this->rewind();
         $data = [];
         foreach ($this as $row) {
-            $data[] = $row->toArray();
+            if (is_scalar($col)) {
+                $data[] = $row->$col;
+            } else {
+                $data[] = $row->toArray();
+            }
         }
         return $data;
     }
