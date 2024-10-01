@@ -502,6 +502,10 @@ class MiniEngine_Controller
     }
 }
 
+class MiniEngine_Table_DuplicateException extends Exception
+{
+}
+
 class MiniEngine_Table
 {
     protected static $_tables = [];
@@ -642,7 +646,14 @@ class MiniEngine_Table
             $params[":val_{$col}"] = $val;
         }
         $sql = "INSERT INTO ::table (" . implode(', ', $cols) . ") VALUES (" . implode(', ', $vals) . ")";
-        $stmt = MiniEngine::dbExecute($sql, $params);
+        try {
+            $stmt = MiniEngine::dbExecute($sql, $params);
+        } catch (PDOException $e) {
+            if ($e->getCode() == 23505) {
+                throw new MiniEngine_Table_DuplicateException($e->getMessage());
+            }
+            throw $e;
+        }
         $insert_id = MiniEngine::getDb()->lastInsertId();
         if (!$insert_id) {
             throw new Exception("Unable to get last insert id.");
