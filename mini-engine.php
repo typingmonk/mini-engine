@@ -145,7 +145,7 @@ class MiniEngine
         if (getenv('ENV') == 'production') {
             return;
         }
-        error_log("SQL: $sql, Params: " . mb_strimwidth(json_encode($params, JSON_UNESCAPED_UNICODE), 0, 300, '...'));
+        error_log("SQL: $sql, Params: " . mb_strimwidth(json_encode($params, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 0, 300, '...'));
     }
 
     public static function initEnv()
@@ -550,7 +550,9 @@ class MiniEngine_Table
         } elseif (in_array($table_columns[$col]['type'], ['bool', 'boolean'])) {
             return $value ? 'TRUE' : 'FALSE';
         } elseif ($table_columns[$col]['type'] == 'jsonb') {
-            return $db->quote(json_encode($value));
+            return $db->quote(json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        } elseif ($table_columns[$col]['type'] == 'geometry') {
+            return "ST_GeomFromGeoJSON(" . $db->quote(json_encode($value)) . ")";
         }
         return $db->quote($value);
     }
@@ -642,11 +644,15 @@ class MiniEngine_Table
         $vals = [];
         foreach ($data as $col => $val) {
             $cols[] = "::col_{$col}";
-            $vals[] = ":val_{$col}";
             $params["::col_{$col}"] = $col;
+            $val_item  = ":val_{$col}";
             if ($table_columns[$col]['type'] == 'jsonb') {
+                $val = json_encode($val, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            } elseif ($table_columns[$col]['type'] == 'geometry') {
+                $val_item = "ST_GeomFromGeoJSON(:val_{$col})";
                 $val = json_encode($val);
             }
+            $vals[] = $val_item;
             $params[":val_{$col}"] = $val;
         }
         $sql = "INSERT INTO ::table (" . implode(', ', $cols) . ") VALUES (" . implode(', ', $vals) . ")";
@@ -859,7 +865,7 @@ class MiniEngine_Table_Row
         $table_columns = $this->_table->getTableColumns();
         foreach ($this->_data as $col => $val) {
             if ($table_columns[$col]['type'] == 'jsonb') {
-                $val = json_encode($val);
+                $val = json_encode($val, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             }
             if (!array_key_exists($col, $this->_origin_data)) {
                 $cols[] = "::col_{$col}";
