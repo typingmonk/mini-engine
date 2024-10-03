@@ -988,6 +988,9 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
     protected $_table = null;
     protected $_data = null;
     protected $_flags = null;
+    protected $_limit = null;
+    protected $_offset = null;
+    protected $_order = null;
     protected $_pointer = 0;
     protected $_search = [];
 
@@ -1003,6 +1006,23 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
         $rs->_search[] = $terms;
         $rs->_flags = $flags;
         return $rs;
+    }
+
+    public function getOrderQuery($order, &$params)
+    {
+        if (is_scalar($order)) {
+            return $order;
+        }
+        $terms = [];
+        $idx = 0;
+        foreach ($order as $k => $v) {
+            $col = "::col_order_{$idx}";
+            $idx ++;
+
+            $terms[] = "::{$col} " . ($v == 'asc' ? 'ASC' : 'DESC');
+            $params["::{$col}"] = $k;
+        }
+        return implode(', ', $terms);
     }
 
     public function getSearchQuery(&$params)
@@ -1118,6 +1138,17 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
         }
 
         $sql = "SELECT " . implode(',', $select_terms) . " FROM ::table WHERE " . $this->getSearchQuery($params);
+        if (!is_null($this->_order)) {
+            $sql .= " ORDER BY " . $this->getOrderQuery($this->_order, $params);
+        }
+        if (!is_null($this->_limit)) {
+            $sql .= " LIMIT :limit";
+            $params[':limit'] = $this->_limit;
+        }
+        if (!is_null($this->_offset)) {
+            $sql .= " OFFSET :offset";
+            $params[':offset'] = $this->_offset;
+        }
         $stmt = MiniEngine::dbExecute($sql, $params);
         $this->_data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $table_columns = $this->_table->getTableColumns();
@@ -1153,6 +1184,27 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
             }
         }
         return $data;
+    }
+
+    public function order($order)
+    {
+        $rs = clone $this;
+        $rs->_order = $order;
+        return $rs;
+    }
+
+    public function limit($limit)
+    {
+        $rs = clone $this;
+        $rs->_limit = $limit;
+        return $rs;
+    }
+
+    public function offset($offset)
+    {
+        $rs = clone $this;
+        $rs->_offset = $offset;
+        return $rs;
     }
 }
 
