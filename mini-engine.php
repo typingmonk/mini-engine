@@ -1033,6 +1033,10 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
                 foreach ($search as $k => $v) {
                     if (is_array($v)) {
                         $search_params = [];
+                        if (!count($v)) {
+                            $search_params[] = "1 = 0"; // false
+                            continue;
+                        }
                         foreach ($v as $idx => $val) {
                             $search_params[] = ":val_{$k}_{$idx}";
                             $params[":val_{$k}_{$idx}"] = $val;
