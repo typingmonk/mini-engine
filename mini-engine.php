@@ -634,6 +634,96 @@ class MiniEngine_Table
         return $table->_primary_keys;
     }
 
+    protected static $_bulk_insert_data = [];
+
+    public static function bulkInsert($data)
+    {
+        $table = self::getTableClass();
+        $table_name = get_class($table);
+        if (!array_key_exists($table_name, self::$_bulk_insert_data)) {
+            self::$_bulk_insert_data[$table_name] = [
+                'table' => $table,
+                'columns' => [],
+                'records' => [],
+            ];
+        }
+
+        $record = [];
+        foreach ($data as $col => $value) {
+            if (!array_key_exists($col, self::$_bulk_insert_data[$table_name]['columns'])) {
+                self::$_bulk_insert_data[$table_name]['columns'][$col] = count(self::$_bulk_insert_data[$table_name]['columns']);
+            }
+            $idx = self::$_bulk_insert_data[$table_name]['columns'][$col];
+            $record[$idx] = $value;
+        }
+        self::$_bulk_insert_data[$table_name]['records'][] = $record;
+        if (count(self::$_bulk_insert_data[$table_name]['records']) >= 1000) {
+            self::bulkCommit($table_name);
+        }
+    }
+
+    public static function bulkCommit($table_name = null)
+    {
+        if (is_null($table_name)) {
+            foreach (array_keys(self::$_bulk_insert_data) as $table_name) {
+                self::bulkCommit($table_name);
+            }
+            return;
+        }
+
+        if (!array_key_exists($table_name, self::$_bulk_insert_data)) {
+            return;
+        }
+        $table = self::$_bulk_insert_data[$table_name]['table'];
+        $params = [
+            '::table' => $table->getTableName(),
+        ];
+        $table_columns = $table->getTableColumns();
+        $col_terms = [];
+        foreach (self::$_bulk_insert_data[$table_name]['columns'] as $col => $idx) {
+            if (!array_key_exists($col, $table_columns)) {
+                throw new Exception("Column not found: $col");
+            }
+            $col_terms[] = "::col_{$col}";
+            $params["::col_{$col}"] = $col;
+        }
+        $insert_terms = [];
+        $val_idx = 0;
+        foreach (self::$_bulk_insert_data[$table_name]['records'] as $record) {
+            $value_terms = [];
+            foreach (self::$_bulk_insert_data[$table_name]['columns'] as $col => $idx) {
+                $val = $record[$idx] ?? null;
+                if (is_null($val)) {
+                    $value_terms[] = "NULL";
+                } elseif ($table_columns[$col]['type'] == 'jsonb') {
+                    $val = json_encode($val, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    $value_terms[] = ":val_{$val_idx}";
+                    $params[":val_{$val_idx}"] = $val;
+                } elseif ($table_columns[$col]['type'] == 'geometry') {
+                    $val = json_encode($val);
+                    $value_terms[] = "ST_GeomFromGeoJSON(:val_{$val_idx})";
+                    $params[":val_{$val_idx}"] = $val;
+                } else {
+                    $value_terms[] = ":val_{$val_idx}";
+                    $params[":val_{$val_idx}"] = $val;
+                }
+                $val_idx++;
+            }
+            $insert_terms[] = "(" . implode(', ', $value_terms) . ")";
+        }
+
+        $sql = "INSERT INTO ::table (" . implode(', ', $col_terms) . ") VALUES " . implode(', ', $insert_terms);
+        try {
+            $stmt = MiniEngine::dbExecute($sql, $params);
+        } catch (PDOException $e) {
+            if ($e->getCode() == 23505) {
+                throw new MiniEngine_Table_DuplicateException($e->getMessage());
+            }
+            throw $e;
+        }
+        unset(self::$_bulk_insert_data[$table_name]);
+    }
+
     public static function insert($data)
     {
         $table = self::getTableClass();
