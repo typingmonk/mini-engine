@@ -145,6 +145,7 @@ class MiniEngine
         if (getenv('ENV') == 'production') {
             return;
         }
+        $sql = mb_strimwidth($sql, 0, 300, '...');
         error_log("SQL: $sql, Params: " . mb_strimwidth(json_encode($params, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 0, 300, '...'));
     }
 
