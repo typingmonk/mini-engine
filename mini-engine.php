@@ -678,7 +678,7 @@ class MiniEngine_Table
         return $table->search(array_combine($primary_keys, is_scalar($id) ? [$id] : $id), '*')->first();
     }
 
-    public static function search($terms, $opts = [])
+    public static function search($terms, $opts = null)
     {
         $table = self::getTableClass();
         $conf = [];
@@ -920,9 +920,19 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
         foreach ($this->_search as $search) {
             if (is_array($search)) {
                 foreach ($search as $k => $v) {
-                    $terms[] = "::col_{$k} = :val_{$k}";
-                    $params["::col_{$k}"] = $k;
-                    $params[":val_{$k}"] = $v;
+                    if (is_array($v)) {
+                        $search_params = [];
+                        foreach ($v as $idx => $val) {
+                            $search_params[] = ":val_{$k}_{$idx}";
+                            $params[":val_{$k}_{$idx}"] = $val;
+                        }
+                        $terms[] = "::col_{$k} IN (" . implode(', ', $search_params) . ")";
+                        $params["::col_{$k}"] = $k;
+                    } else {
+                        $terms[] = "::col_{$k} = :val_{$k}";
+                        $params["::col_{$k}"] = $k;
+                        $params[":val_{$k}"] = $v;
+                    }
                 }
                 continue;
             }
