@@ -1022,8 +1022,8 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
             $col = "::col_order_{$idx}";
             $idx ++;
 
-            $terms[] = "::{$col} " . ($v == 'asc' ? 'ASC' : 'DESC');
-            $params["::{$col}"] = $k;
+            $terms[] = "{$col} " . (strtolower($v) == 'asc' ? 'ASC' : 'DESC');
+            $params["{$col}"] = $k;
         }
         return implode(', ', $terms);
     }
