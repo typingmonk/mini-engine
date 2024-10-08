@@ -1162,9 +1162,9 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
         $this->_data = array_map(function($row) use ($table_columns) {
             foreach ($row as $k => $v) {
                 if ($table_columns[$k]['type'] == 'jsonb') {
-                    $row[$k] = json_decode($v);
+                    $row[$k] = is_null($v) ? null: json_decode($v);
                 } elseif ($table_columns[$k]['type'] == 'geometry') {
-                    $row[$k] = json_decode($v);
+                    $row[$k] = is_null($v) ? null: json_decode($v);
                 }
             }
             return $row;
