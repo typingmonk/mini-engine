@@ -145,7 +145,10 @@ class MiniEngine
         if (getenv('ENV') == 'production') {
             return;
         }
-        $sql = mb_strimwidth($sql, 0, 300, '...');
+        // firt 100 and last 100 characters
+        if (strlen($sql) > 200) {
+            $sql = substr($sql, 0, 100) . '...' . substr($sql, -100);
+        }
         error_log("SQL: $sql, Params: " . mb_strimwidth(json_encode($params, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 0, 300, '...'));
     }
 
