@@ -814,7 +814,11 @@ class MiniEngine_Table
                 if (array_key_exists($type, $alias)) {
                     $type = $alias[$type];
                 }
-                $cols[] = "::col{$col} " . strtoupper($type);
+                $col_def = "::col{$col} " . strtoupper($type);
+                if (array_key_exists('default', $config)) {
+                    $col_def .= " DEFAULT " . self::quote($config['default'], $col);
+                }
+                $cols[] = $col_def;
                 $params["::col{$col}"] = $col;
             } elseif ($config['type'] == 'varchar') {
                 $cols[] = "::col_{$col} VARCHAR(" . ($config['length'] ?? 255) . ")";
