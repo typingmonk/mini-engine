@@ -1062,6 +1062,10 @@ class MiniEngine_Table_Rowset implements Countable, SeekableIterator
                 continue;
             }
 
+            if (is_scalar($search)) {
+                return $search;
+            }
+
             throw new Exception("Unsupported search query." . json_encode($search));
         }
         if (count($terms) == 0) {
